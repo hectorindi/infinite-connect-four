@@ -1,7 +1,7 @@
-import { GameModel }  from '../models/GameModel.js';
-import { GAME_CONST } from '../types/const.js';
-import { Utils } from '../utils/Utils.js';
-import  {GameView}  from '../views/GameView.js';
+import { GameModel }  from '../models/GameModel';
+import { GAME_CONST } from '../types/const';
+import { Utils } from '../utils/Utils';
+import  {GameView}  from '../views/GameView';
 
 export class GameController {
   constructor(private model: GameModel, private view: GameView) {}

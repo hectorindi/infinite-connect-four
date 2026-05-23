@@ -5,7 +5,7 @@
   "description": "Infinite Connect Four built with PixiJS",
   "scripts": {
     "build": "webpack --mode development --no-cache",
-    "run": "python -m http.server 8080 -d dist"
+    "dev": "python -m http.server 8080 -d dist"
   },
   "dependencies": {
     "pixi.js": "^8.2.6"

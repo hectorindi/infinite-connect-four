@@ -5,10 +5,17 @@ const CopyPlugin = require("copy-webpack-plugin"); // 1. Import this
 module.exports = {
   entry: './Source/src/main.ts',
   mode: 'development',
-  devtool: 'source-map',
+  devtool: 'eval-source-map',
   module: {
     rules: [
-      { test: /\.ts$/, use: 'ts-loader', exclude: /node_modules/ },
+      { 
+        test: /\.ts$/, 
+        loader: 'ts-loader',
+        options: {
+          transpileOnly: true // This is the key fix
+        },
+        exclude: /node_modules/ 
+      },
       { 
         test: /\.css$/i, 
         use: ["style-loader", "css-loader"] // 2. This fixes the MIME type error

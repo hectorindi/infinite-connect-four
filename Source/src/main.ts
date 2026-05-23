@@ -1,6 +1,6 @@
-import  {GameModel}  from './models/GameModel.js';
-import  {GameView}  from './views/GameView.js';
-import  {GameController}  from './controllers/GameController.js'; 
+import  {GameModel}  from './models/GameModel';
+import  {GameView}  from './views/GameView';
+import  {GameController}  from './controllers/GameController'; 
 
 async function bootstrap() {
     const model = new GameModel();

@@ -102,8 +102,8 @@ export class GameView {
     const line = PIXI.Color.shared.setValue(Utils.token('--color-border', this.root)).toNumber();
     const accent = PIXI.Color.shared.setValue(Utils.token('--color-primary',this.root)).toNumber();
 
-    const visibleCols = Math.ceil(this.app.screen.width / GAME_CONST.CELL_DIMENTION) + GAME_CONST.COL;
-    const visibleRows = Math.ceil(this.app.screen.height / GAME_CONST.CELL_DIMENTION) + GAME_CONST.ROWS;
+    const visibleCols = Math.ceil(this.app.screen.width / GAME_CONST.CELL_DIMENTION);
+    const visibleRows = Math.ceil(this.app.screen.height / GAME_CONST.CELL_DIMENTION);
     const centerCol = Math.round(-state.cameraX / GAME_CONST.CELL_DIMENTION);
     const centerRow = Math.round(state.cameraY / GAME_CONST.CELL_DIMENTION);
 

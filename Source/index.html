@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Infinite Connect Four</title>
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@700,800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles/main.css" />
+</head>
+<body>
+  <a class="skip-link" href="#game-wrap">Skip to game</a>
+  <main class="shell">
+    <aside class="panel sidebar" aria-label="Game information and controls">
+      <div class="brand">
+        <div class="brand-stack">
+          <img class="brand-image" src="./assets/logo.png" alt="Infinite Connect Four logo" width="44" height="44" />
+          <div class="brand-copy">
+            <h1>Infinite Four</h1>
+            <p>Classic gravity-based drops, but the board stretches forever in every direction.</p>
+          </div>
+        </div>
+        <button class="theme-toggle" data-theme-toggle aria-label="Switch to light mode" title="Toggle theme"></button>
+      </div>
+      <section class="stat-grid" aria-label="Match stats">
+        <div class="stat"><div class="stat-label">Turn</div><div class="stat-value" id="turnValue">Red</div></div>
+        <div class="stat"><div class="stat-label">Moves</div><div class="stat-value" id="moveValue">0</div></div>
+        <div class="stat"><div class="stat-label">View X</div><div class="stat-value" id="xValue">0</div></div>
+        <div class="stat"><div class="stat-label">View Y</div><div class="stat-value" id="yValue">0</div></div>
+      </section>
+      <div class="action-row">
+        <button class="btn btn-primary" id="resetBtn">New match</button>
+        <button class="btn btn-secondary" id="centerBtn">Center view</button>
+      </div>
+      <section class="legend">
+        <h2>Pieces</h2>
+        <div class="legend-row">
+          <div class="chip"><span class="dot red"></span>Red player</div>
+          <div class="chip"><span class="dot gold"></span>Gold player</div>
+        </div>
+      </section>
+    </aside>
+    <section class="panel main">
+      <div id="game-wrap" tabindex="0" aria-label="Infinite Connect Four game board">
+        <div id="pixi-root"></div>
+        <div class="hud" aria-hidden="true">
+          <div class="topbar">
+            <div class="badge">Column <span class="turn" id="columnValue">0</span></div>
+            <div class="badge">Row preview <span class="turn" id="rowValue">0</span></div>
+          </div>
+          <div class="bottombar">
+            <div class="message" id="statusMessage"><strong>Red starts.</strong> Move the selector left or right and drop anywhere.</div>
+            <div class="footer-note">Infinite camera, finite win rule.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

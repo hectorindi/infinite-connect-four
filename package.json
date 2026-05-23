@@ -1,0 +1,23 @@
+{
+  "name": "infinite-connect-four-pixi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Infinite Connect Four built with PixiJS",
+  "scripts": {
+    "build": "webpack --mode development --no-cache",
+    "run": "python -m http.server 8080 -d dist"
+  },
+  "dependencies": {
+    "pixi.js": "^8.2.6"
+  },
+  "devDependencies": {
+    "copy-webpack-plugin": "^14.0.0",
+    "html-webpack-plugin": "^5.6.7",
+    "ts-loader": "^9.5.7",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14",
+    "webpack": "^5.107.1",
+    "webpack-cli": "^7.0.2",
+    "webpack-dev-server": "^5.2.4"
+  }
+}

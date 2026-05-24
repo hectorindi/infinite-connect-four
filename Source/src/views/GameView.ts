@@ -33,9 +33,11 @@ export class GameView {
   private gridLayer!: PIXI.Graphics;
   private pieceLayer!: PIXI.Container;
   private fxLayer!: PIXI.Container;
+  private previewLayer!: PIXI.Container;
   private preview!: PIXI.Graphics;
 
   private spriteMap: Map<string, PIXI.Graphics> = new Map();
+  private previewBaseY: number = 0;
 
   constructor() {
     this.app = new PIXI.Application();
@@ -60,11 +62,10 @@ export class GameView {
     this.gridLayer = new PIXI.Graphics({});
     this.pieceLayer = new PIXI.Container();
     this.fxLayer = new PIXI.Container();
-    const previewLayer = new PIXI.Container();
+    this.previewLayer = new PIXI.Container();
     this.preview = new PIXI.Graphics({});
-    previewLayer.addChild(this.preview);
-
-    this.world.addChild(this.gridLayer, this.pieceLayer, this.fxLayer, previewLayer);
+    this.previewLayer.addChild(this.preview);
+    this.world.addChild(this.gridLayer, this.pieceLayer, this.fxLayer, this.previewLayer);
     this.app.stage.addChild(this.world);
   }
 
@@ -142,11 +143,24 @@ export class GameView {
 
   public renderPreview(state: GameState, nextRow: number, time: number = 0): void {
     const pos = Utils.cellToWorld(state.selectedCol, nextRow);
+    this.previewLayer.position.set(pos.x, pos.y + Math.sin(time / GAME_CONST.PLAYER.animate_time) * GAME_CONST.PLAYER.spawn_height_mul);
     this.preview.clear();
-    this.preview
-      .circle(pos.x, pos.y + Math.sin(time / GAME_CONST.PLAYER.animate_time) * GAME_CONST.PLAYER.spawn_height_mul, GAME_CONST.CELL_DIMENTION * GAME_CONST.PLAYER.radius - 0.02)
+      this.preview
+      .circle(0, 0 , GAME_CONST.CELL_DIMENTION * GAME_CONST.PLAYER.radius - 0.02)
       .fill(Utils.pieceColor(state.current), 0.22)
       .stroke({ color: Utils.pieceColor(state.current), width: 3, alpha: 0.9 });
+  }
+
+  public animatePreview(time: number, isAnimating: boolean): void {
+    if (!this.preview) return;
+
+    if (isAnimating) {
+      this.preview.alpha = 0;
+      return;
+    }
+    this.preview.alpha = 0.5; 
+    const bounceOffset = Math.sin(time / 200) * 8; 
+    this.preview.y = this.previewBaseY + bounceOffset;
   }
 
   // Animation Elements

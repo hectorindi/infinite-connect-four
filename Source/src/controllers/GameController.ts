@@ -4,13 +4,29 @@ import { Utils } from '../utils/Utils';
 import  {GameView}  from '../views/GameView';
 
 export class GameController {
+  private lastRenderHash: string = '';
   constructor(private model: GameModel, private view: GameView) {}
 
   public init(): void {
     this.setupEventListeners();
     this.view.app.ticker.add((ticker: any) => {
-      this.view.renderBoard(this.model.state);
-      this.view.renderPreview(this.model.state, this.model.getHeight(this.model.state.selectedCol), ticker.lastTime);
+      const state = this.model.state;
+      const currentHash = [
+        state.cameraX, 
+        state.cameraY, 
+        state.selectedCol, 
+        state.current, 
+        state.moves, 
+        this.model.grid.size,
+        state.isAnimating
+      ].join('|');
+
+      if (this.lastRenderHash !== currentHash) {
+        this.view.renderBoard(state);
+        this.view.renderPreview(state, this.model.getHeight(state.selectedCol)); 
+        this.lastRenderHash = currentHash;
+      }
+      this.view.animatePreview(ticker.lastTime, state.isAnimating);
     });
     this.resetGame();
   }

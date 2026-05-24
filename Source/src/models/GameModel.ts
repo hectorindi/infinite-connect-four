@@ -166,4 +166,23 @@ export class GameModel {
     }
     return movements;
   }
+
+  public getUniqueSortedPoints(chains: Point[][]): Point[] {
+    const uniqueMap = new Map<string, Point>();
+    for (const chain of chains) {
+      for (const [x, y] of chain) {
+        uniqueMap.set(this.cellKey(x, y), [x, y]);
+      }
+    }
+    const points = Array.from(uniqueMap.values());
+    points.sort((a, b) => {
+      if (a[0] !== b[0]) return a[0] - b[0]; 
+      return a[1] - b[1]; 
+    });
+    return points;
+  }
+
+  public removeSingleToken(x: number, y: number): void {
+    this.grid.delete(this.cellKey(x, y));
+  }
 }

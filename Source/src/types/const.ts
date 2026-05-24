@@ -10,7 +10,10 @@ export const GAME_CONST = {
         highlight_offset: 0.12, 
         highlight_size: 0.11, 
         spawn_height_mul: 6, 
-        animate_time: 260,
+        animate_time: 200,
+        disappear_time: 150,
+        base_animate_time: 200,
+        base_disappear_time: 150,
         ease: 3
     },
     CSS: {

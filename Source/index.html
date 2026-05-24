@@ -34,6 +34,12 @@
       <div class="action-row">
         <button class="btn btn-primary" id="resetBtn">New match</button>
         <button class="btn btn-secondary" id="centerBtn">Center view</button>
+        <div class="speed-control" style="margin-top: 15px; display: flex; flex-direction: column; gap: 5px;">
+          <label for="speedSlider" style="font-size: 0.85rem; color: var(--text-muted);">
+            Animation Speed: <span id="speedValueDisplay">1x</span>
+          </label>
+          <input type="range" id="speedSlider" min="0.5" max="3" step="0.25" value="1">
+        </div>
       </div>
       <section class="legend">
         <h2>Pieces</h2>

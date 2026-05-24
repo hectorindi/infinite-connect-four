@@ -24,6 +24,8 @@ export class GameView {
     themeBtn: document.querySelector('[data-theme-toggle]') as HTMLElement,
     redScoreValue: document.getElementById('redScoreValue') as HTMLElement,
     goldScoreValue: document.getElementById('goldScoreValue') as HTMLElement,
+    speedSlider: document.getElementById('speedSlider') as HTMLInputElement,
+    speedValueDisplay: document.getElementById('speedValueDisplay') as HTMLElement,
   };
 
   // Pixi layers
@@ -219,79 +221,34 @@ export class GameView {
     return `${col},${row}`;
   }
 
-  public animateDisappear(chains: Point[][]): Promise<void> {
+  public animateSingleDisappear(col: number, row: number): Promise<void> {
     return new Promise((resolve) => {
-      // 1. Flatten the chains into a map to get unique points
-      const uniquePointsMap = new Map<string, Point>();
-      for (const chain of chains) {
-        for (const [x, y] of chain) {
-          uniquePointsMap.set(this.getCellKey(x, y), [x, y]);
-        }
-      }
+      const key = this.getCellKey(col, row);
+      const sprite = this.spriteMap.get(key);
 
-      const uniquePoints = Array.from(uniquePointsMap.values());
-      if (uniquePoints.length === 0) {
+      if (!sprite) {
         resolve();
         return;
       }
 
-      // 2. Sort by the global deterministic order:
-      // Left-to-Right (X ascending), tie-breaker Bottom-to-Top (Y ascending)
-      uniquePoints.sort((a, b) => {
-        if (a[0] !== b[0]) return a[0] - b[0]; 
-        return a[1] - b[1]; 
-      });
-
-      // 3. Staggered Animation settings
-      const staggerDelay = 150; // ms delay between each token starting its fade
-      const fadeDuration = 300; // ms duration of the actual fade
       const start = performance.now();
-
-      // Map our sorted points to their specific animation timelines
-      const sequence = uniquePoints.map((point, index) => {
-        const key = this.getCellKey(point[0], point[1]);
-        return {
-          key,
-          sprite: this.spriteMap.get(key),
-          startTime: start + (index * staggerDelay),
-        };
-      });
+      const duration = GAME_CONST.PLAYER.disappear_time;
 
       const animate = (now: number) => {
-        let allAnimationsComplete = true;
+        const t = Math.min((now - start) / duration, 1);
+        
+        sprite.alpha = 1 - t;
+        sprite.scale.set(1 - (t * 0.5));
 
-        sequence.forEach(item => {
-          if (!item.sprite) return;
-
-          // If the current time has reached this sprite's specific start time
-          if (now >= item.startTime) {
-            const t = Math.min((now - item.startTime) / fadeDuration, 1);
-            
-            item.sprite.alpha = 1 - t; // Fade out
-            item.sprite.scale.set(1 - (t * 0.5)); // Shrink slightly
-
-            if (t < 1) allAnimationsComplete = false;
-          } else {
-            // Not time for this sprite to start yet
-            allAnimationsComplete = false;
-          }
-        });
-
-        if (!allAnimationsComplete) {
+        if (t < 1) {
           requestAnimationFrame(animate);
         } else {
-          // Cleanup phase once every sprite in the sequence has finished fading
-          sequence.forEach(item => {
-            if (item.sprite) {
-              this.pieceLayer.removeChild(item.sprite);
-              item.sprite.destroy();
-              this.spriteMap.delete(item.key);
-            }
-          });
+          this.pieceLayer.removeChild(sprite);
+          sprite.destroy();
+          this.spriteMap.delete(key);
           resolve();
         }
       };
-
       requestAnimationFrame(animate);
     });
   }

@@ -18,6 +18,13 @@ export class GameController {
   private setupEventListeners(): void {
     const els = this.view.getElements();
 
+    els.speedSlider.addEventListener('input', (e: Event) => {
+    const speedMultiplier = parseFloat((e.target as HTMLInputElement).value);
+    els.speedValueDisplay.textContent = `${speedMultiplier}x`;
+    GAME_CONST.PLAYER.animate_time = GAME_CONST.PLAYER.base_animate_time / speedMultiplier;
+    GAME_CONST.PLAYER.disappear_time = GAME_CONST.PLAYER.base_disappear_time / speedMultiplier;
+  });
+
     // Keydown Controls
     els.wrap.addEventListener('keydown', (e: KeyboardEvent) => {
       if (this.model.state.isAnimating) return;
@@ -99,10 +106,10 @@ export class GameController {
 
   let cascadeActive = true;
   while (cascadeActive) {
-    
     const chains = this.model.findAllChains();
+
     if (chains.length === 0) {
-      cascadeActive = false;
+      cascadeActive = false; 
       break;
     }
 
@@ -112,12 +119,29 @@ export class GameController {
       state.player2Score += chains.length;
     }
 
-    await this.view.animateDisappear(chains);
-    this.model.removeTokens(chains);
-    
-    const gravityMovements = this.model.applyGravity();
-    if (gravityMovements.length > 0) {
-      await this.view.animateGravity(gravityMovements);
+    const doomedPoints = this.model.getUniqueSortedPoints(chains);
+
+    while (doomedPoints.length > 0) {
+      const currentPoint = doomedPoints.shift();
+      if (!currentPoint) continue;
+      const [col, row] = currentPoint;
+
+      await this.view.animateSingleDisappear(col, row);
+      this.model.removeSingleToken(col, row);
+
+      const gravityMovements = this.model.applyGravity();
+      
+      if (gravityMovements.length > 0) {
+        await this.view.animateGravity(gravityMovements);
+
+        for (const move of gravityMovements) {
+          for (let i = 0; i < doomedPoints.length; i++) {
+            if (doomedPoints[i][0] === move.col && doomedPoints[i][1] === move.oldRow) {
+              doomedPoints[i][1] = move.newRow; 
+            }
+          }
+        }
+      }
     }
   }
 

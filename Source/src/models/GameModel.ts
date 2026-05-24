@@ -21,7 +21,10 @@ export class GameModel {
       dragStartY: 0,
       dragOriginX: 0,
       dragOriginY: 0,
+      player1Score: 0,
+      player2Score: 0,
       gameOver: false,
+      isAnimating: false,
     };
   }
 
@@ -84,5 +87,83 @@ export class GameModel {
       if (cells.length >= 4) return cells;
     }
     return null;
+  }
+
+  public findAllChains(): Point[][] {
+    const chains: Point[][] = [];
+    
+    const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]]; 
+    
+    const cols = Array.from(this.columnHeights.keys());
+    if (cols.length === 0) return chains;
+    
+    const minCol = Math.min(...cols);
+    const maxCol = Math.max(...cols);
+
+    for (let x = minCol; x <= maxCol; x++) {
+      const height = this.getHeight(x);
+      for (let y = 0; y < height; y++) {
+        const player = this.getCell(x, y);
+        if (!player) continue;
+
+        for (const [dx, dy] of dirs) {
+          
+          const prevX = x - dx;
+          const prevY = y - dy;
+          if (this.getCell(prevX, prevY) === player) continue; 
+
+          const currentChain: Point[] = [[x, y]];
+          let nx = x + dx;
+          let ny = y + dy;
+
+          while (this.getCell(nx, ny) === player) {
+            currentChain.push([nx, ny]);
+            nx += dx;
+            ny += dy;
+          }
+
+          if (currentChain.length >= 4) {
+            chains.push(currentChain);
+          }
+        }
+      }
+    }
+    return chains;
+  }
+
+  
+  public removeTokens(chains: Point[][]): void {
+    for (const chain of chains) {
+      for (const [x, y] of chain) {
+        this.grid.delete(this.cellKey(x, y));
+      }
+    }
+  }
+
+  
+  public applyGravity(): { col: number, oldRow: number, newRow: number }[] {
+    const movements: { col: number, oldRow: number, newRow: number }[] = [];
+    const cols = Array.from(this.columnHeights.keys());
+
+    for (const col of cols) {
+      const height = this.getHeight(col);
+      let writeY = 0;
+
+      for (let readY = 0; readY < height; readY++) {
+        const player = this.getCell(col, readY);
+        
+        if (player !== 0) {
+          if (writeY !== readY) {
+            
+            this.setCell(col, writeY, player);
+            this.grid.delete(this.cellKey(col, readY));
+            movements.push({ col, oldRow: readY, newRow: writeY });
+          }
+          writeY++;
+        }
+      }
+      this.setHeight(col, writeY);
+    }
+    return movements;
   }
 }

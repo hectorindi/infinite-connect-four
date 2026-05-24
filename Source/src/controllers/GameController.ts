@@ -20,6 +20,7 @@ export class GameController {
 
     // Keydown Controls
     els.wrap.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (this.model.state.isAnimating) return;
       const key = e.key.toLowerCase();
       if (['arrowleft', 'a'].includes(key)) this.model.state.selectedCol -= 1;
       if (['arrowright', 'd'].includes(key)) this.model.state.selectedCol += 1;
@@ -31,6 +32,7 @@ export class GameController {
 
     // Pointer Interractions
     this.view.app.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
+      if (this.model.state.isAnimating) return;
       const state = this.model.state;
       state.dragging = true;
       state.dragStartX = e.clientX;
@@ -42,6 +44,7 @@ export class GameController {
     });
 
     window.addEventListener('pointermove', (e: PointerEvent) => {
+      if (this.model.state.isAnimating) return;
       const state = this.model.state;
       if (!state.dragging) return;
       state.cameraX = state.dragOriginX + (e.clientX - state.dragStartX);
@@ -51,6 +54,7 @@ export class GameController {
     });
 
     window.addEventListener('pointerup', (e: PointerEvent) => {
+      if (this.model.state.isAnimating) return;
       const state = this.model.state;
       if (!state.dragging) return;
       const moved = Math.hypot(e.clientX - state.dragStartX, e.clientY - state.dragStartY);
@@ -78,33 +82,62 @@ export class GameController {
     return Math.round(worldPos.x / GAME_CONST.CELL_DIMENTION);
   }
 
-  private dropPiece(): void {
-    const state = this.model.state;
-    if (state.gameOver) return;
+  private async dropPiece(): Promise<void> {
+  const state = this.model.state;
+  if (state.gameOver || state.isAnimating) return;
 
-    const col = state.selectedCol;
-    const row = this.model.getHeight(col);
+  state.isAnimating = true;
 
-    this.model.setCell(col, row, state.current);
-    this.model.setHeight(col, row + 1);
-    this.view.addPiece(col, row, state.current);
-    this.model.incrementMoves();
+  const col = state.selectedCol;
+  const row = this.model.getHeight(col);
 
-    const player = state.current;
-    const win = this.model.checkWin(col, row, player);
+  this.model.setCell(col, row, state.current);
+  this.model.setHeight(col, row + 1);
+  this.model.incrementMoves();
+  
+  await this.view.animateDrop(col, row, state.current);
 
-    if (win) {
-      state.gameOver = true;
-      this.view.pulseWin(win);
-      const playerColorText = player === 1 ? 'Red' : 'Gold';
-      this.syncHud(`<strong>${playerColorText} wins.</strong> Connected ${win.length} in a row on the infinite board.`);
-      return;
+  let cascadeActive = true;
+  while (cascadeActive) {
+    
+    const chains = this.model.findAllChains();
+    if (chains.length === 0) {
+      cascadeActive = false;
+      break;
     }
 
-    this.model.switchPlayer();
-    const nextPlayerText = state.current === 1 ? 'Red' : 'Gold';
-    this.syncHud(`<strong>${nextPlayerText} turn.</strong> The board keeps expanding, so every column stays playable.`);
+    if (state.current === 1) {
+      state.player1Score += chains.length;
+    } else {
+      state.player2Score += chains.length;
+    }
+
+    await this.view.animateDisappear(chains);
+    this.model.removeTokens(chains);
+    
+    const gravityMovements = this.model.applyGravity();
+    if (gravityMovements.length > 0) {
+      await this.view.animateGravity(gravityMovements);
+    }
   }
+
+  const currentPlayerScore = state.current === 1 ? state.player1Score : state.player2Score;
+  
+  if (currentPlayerScore >= 3) {
+    state.gameOver = true;
+    const playerColorText = state.current === 1 ? 'Red' : 'Gold';
+    this.syncHud(`<strong>${playerColorText} wins!</strong> Reached 3 chains.`);
+    state.isAnimating = false;
+    return;
+  }
+
+  // 5. Next Turn
+  this.model.switchPlayer();
+  const nextPlayerText = state.current === 1 ? 'Red' : 'Gold';
+  this.syncHud(`<strong>${nextPlayerText} turn.</strong> Drop a token to form chains.`);
+  
+  state.isAnimating = false;
+}
 
   private resetGame(): void {
     this.model.reset();

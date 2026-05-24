@@ -17,7 +17,7 @@
           <img class="brand-image" src="./assets/logo.png" alt="Infinite Connect Four logo" width="44" height="44" />
           <div class="brand-copy">
             <h1>Infinite Four</h1>
-            <p>Classic gravity-based drops, but the board stretches forever in every direction.</p>
+            <p>Match 4 tokens to clear chains. Cascading pieces form new chains. First to 3 wins!</p>
           </div>
         </div>
         <button class="theme-toggle" data-theme-toggle aria-label="Switch to light mode" title="Toggle theme"></button>
@@ -25,8 +25,11 @@
       <section class="stat-grid" aria-label="Match stats">
         <div class="stat"><div class="stat-label">Turn</div><div class="stat-value" id="turnValue">Red</div></div>
         <div class="stat"><div class="stat-label">Moves</div><div class="stat-value" id="moveValue">0</div></div>
-        <div class="stat"><div class="stat-label">View X</div><div class="stat-value" id="xValue">0</div></div>
-        <div class="stat"><div class="stat-label">View Y</div><div class="stat-value" id="yValue">0</div></div>
+        <div class="stat"><div class="stat-label">Red Chains</div><div class="stat-value" id="redScoreValue">0</div></div>
+        <div class="stat"><div class="stat-label">Gold Chains</div><div class="stat-value" id="goldScoreValue">0</div></div>
+        
+        <div class="stat" style="display: none;"><div class="stat-label">View X</div><div class="stat-value" id="xValue">0</div></div>
+        <div class="stat" style="display: none;"><div class="stat-label">View Y</div><div class="stat-value" id="yValue">0</div></div>
       </section>
       <div class="action-row">
         <button class="btn btn-primary" id="resetBtn">New match</button>
@@ -50,7 +53,7 @@
           </div>
           <div class="bottombar">
             <div class="message" id="statusMessage"><strong>Red starts.</strong> Move the selector left or right and drop anywhere.</div>
-            <div class="footer-note">Infinite camera, finite win rule.</div>
+            <div class="footer-note">First to 3 chains wins. Chains cascade!</div>
           </div>
         </div>
       </div>

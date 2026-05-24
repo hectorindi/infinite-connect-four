@@ -10,6 +10,9 @@ export interface GameState {
   dragOriginX: number;
   dragOriginY: number;
   gameOver: boolean;
+  player1Score: number,
+  player2Score: number,
+  isAnimating: boolean
 }
 
 export type GridMap = Map<string, number>;

@@ -4,9 +4,9 @@ import { GAME_CONST } from '../types/const';
 import { Utils } from '../utils/Utils';
 console.log("Pixi Version:", PIXI.VERSION);
 export class GameView {
-  
+
   public app: PIXI.Application;
-  
+
   // DOM Elements
   private root = document.documentElement;
   private gameElements = {
@@ -21,7 +21,9 @@ export class GameView {
     statusMessage: document.getElementById('statusMessage') as HTMLElement,
     resetBtn: document.getElementById('resetBtn') as HTMLElement,
     centerBtn: document.getElementById('centerBtn') as HTMLElement,
-    themeBtn: document.querySelector('[data-theme-toggle]') as HTMLElement
+    themeBtn: document.querySelector('[data-theme-toggle]') as HTMLElement,
+    redScoreValue: document.getElementById('redScoreValue') as HTMLElement,
+    goldScoreValue: document.getElementById('goldScoreValue') as HTMLElement,
   };
 
   // Pixi layers
@@ -30,6 +32,8 @@ export class GameView {
   private pieceLayer!: PIXI.Container;
   private fxLayer!: PIXI.Container;
   private preview!: PIXI.Graphics;
+
+  private spriteMap: Map<string, PIXI.Graphics> = new Map();
 
   constructor() {
     this.app = new PIXI.Application();
@@ -54,7 +58,6 @@ export class GameView {
     this.gridLayer = new PIXI.Graphics({});
     this.pieceLayer = new PIXI.Container();
     this.fxLayer = new PIXI.Container();
-    
     const previewLayer = new PIXI.Container();
     this.preview = new PIXI.Graphics({});
     previewLayer.addChild(this.preview);
@@ -67,7 +70,6 @@ export class GameView {
   private setupTheme(): void {
     let theme = matchMedia('(prefers-color-scheme: dark)').matches ? GAME_CONST.CSS.DARK : GAME_CONST.CSS.LIGHT;
     this.root.setAttribute('data-theme', theme);
-    
     const setThemeIcon = () => {
       this.gameElements.themeBtn.setAttribute('aria-label', `Switch to ${theme === GAME_CONST.CSS.DARK ? GAME_CONST.CSS.LIGHT : GAME_CONST.CSS.DARK} mode`);
       this.gameElements.themeBtn.innerHTML = theme === 'dark'
@@ -90,6 +92,8 @@ export class GameView {
     this.gameElements.yValue.textContent = String(nextRow);
     this.gameElements.columnValue.textContent = String(state.selectedCol);
     this.gameElements.rowValue.textContent = String(nextRow);
+    this.gameElements.redScoreValue.textContent = String(state.player1Score);
+    this.gameElements.goldScoreValue.textContent = String(state.player2Score);
     if (message) this.gameElements.statusMessage.innerHTML = message;
   }
 
@@ -98,9 +102,9 @@ export class GameView {
     this.world.x = this.app.screen.width / 2 + state.cameraX;
     this.world.y = this.app.screen.height / 2 + state.cameraY;
     this.gridLayer.clear();
-    
+
     const line = PIXI.Color.shared.setValue(Utils.token('--color-border', this.root)).toNumber();
-    const accent = PIXI.Color.shared.setValue(Utils.token('--color-primary',this.root)).toNumber();
+    const accent = PIXI.Color.shared.setValue(Utils.token('--color-primary', this.root)).toNumber();
 
     const visibleCols = Math.ceil(this.app.screen.width / GAME_CONST.CELL_DIMENTION);
     const visibleRows = Math.ceil(this.app.screen.height / GAME_CONST.CELL_DIMENTION);
@@ -154,24 +158,33 @@ export class GameView {
     return g;
   }
 
-  public addPiece(col: number, row: number, player: number): void {
-    const pos = Utils.cellToWorld(col, row);
-    const piece = this.makePieceSprite(player);
-    piece.x = pos.x;
-    piece.y = pos.y - GAME_CONST.CELL_DIMENTION * GAME_CONST.PLAYER.spawn_height_mul;
-    this.pieceLayer.addChild(piece);
+  public animateDrop(col: number, row: number, player: number): Promise<void> {
+    return new Promise((resolve) => {
+      const pos = Utils.cellToWorld(col, row);
+      const piece = this.makePieceSprite(player);
+      piece.x = pos.x;
+      piece.y = pos.y - GAME_CONST.CELL_DIMENTION * GAME_CONST.PLAYER.spawn_height_mul;
 
-    const targetY = pos.y;
-    const startY = piece.y;
-    const start = performance.now();
+      this.pieceLayer.addChild(piece);
+      this.spriteMap.set(this.getCellKey(col, row), piece);
 
-    const animate = (now: number) => {
-      const t = Math.min((now - start) / GAME_CONST.PLAYER.animate_time, 1);
-      const eased = 1 - Math.pow(1 - t, GAME_CONST.PLAYER.ease);
-      piece.y = startY + (targetY - startY) * eased;
-      if (t < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
+      const targetY = pos.y;
+      const startY = piece.y;
+      const start = performance.now();
+
+      const animate = (now: number) => {
+        const t = Math.min((now - start) / GAME_CONST.PLAYER.animate_time, 1);
+        const eased = 1 - Math.pow(1 - t, GAME_CONST.PLAYER.ease);
+        piece.y = startY + (targetY - startY) * eased;
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          piece.y = targetY;
+          resolve();
+        }
+      };
+      requestAnimationFrame(animate);
+    });
   }
 
   public pulseWin(cells: Point[]): void {
@@ -191,6 +204,7 @@ export class GameView {
   public clearLayerEffects(): void {
     this.pieceLayer.removeChildren();
     this.fxLayer.removeChildren();
+    this.spriteMap.clear();
   }
 
   public focusWrapper(): void {
@@ -199,5 +213,136 @@ export class GameView {
 
   public getElements() {
     return this.gameElements;
+  }
+
+  private getCellKey(col: number, row: number): string {
+    return `${col},${row}`;
+  }
+
+  public animateDisappear(chains: Point[][]): Promise<void> {
+    return new Promise((resolve) => {
+      // 1. Flatten the chains into a map to get unique points
+      const uniquePointsMap = new Map<string, Point>();
+      for (const chain of chains) {
+        for (const [x, y] of chain) {
+          uniquePointsMap.set(this.getCellKey(x, y), [x, y]);
+        }
+      }
+
+      const uniquePoints = Array.from(uniquePointsMap.values());
+      if (uniquePoints.length === 0) {
+        resolve();
+        return;
+      }
+
+      // 2. Sort by the global deterministic order:
+      // Left-to-Right (X ascending), tie-breaker Bottom-to-Top (Y ascending)
+      uniquePoints.sort((a, b) => {
+        if (a[0] !== b[0]) return a[0] - b[0]; 
+        return a[1] - b[1]; 
+      });
+
+      // 3. Staggered Animation settings
+      const staggerDelay = 150; // ms delay between each token starting its fade
+      const fadeDuration = 300; // ms duration of the actual fade
+      const start = performance.now();
+
+      // Map our sorted points to their specific animation timelines
+      const sequence = uniquePoints.map((point, index) => {
+        const key = this.getCellKey(point[0], point[1]);
+        return {
+          key,
+          sprite: this.spriteMap.get(key),
+          startTime: start + (index * staggerDelay),
+        };
+      });
+
+      const animate = (now: number) => {
+        let allAnimationsComplete = true;
+
+        sequence.forEach(item => {
+          if (!item.sprite) return;
+
+          // If the current time has reached this sprite's specific start time
+          if (now >= item.startTime) {
+            const t = Math.min((now - item.startTime) / fadeDuration, 1);
+            
+            item.sprite.alpha = 1 - t; // Fade out
+            item.sprite.scale.set(1 - (t * 0.5)); // Shrink slightly
+
+            if (t < 1) allAnimationsComplete = false;
+          } else {
+            // Not time for this sprite to start yet
+            allAnimationsComplete = false;
+          }
+        });
+
+        if (!allAnimationsComplete) {
+          requestAnimationFrame(animate);
+        } else {
+          // Cleanup phase once every sprite in the sequence has finished fading
+          sequence.forEach(item => {
+            if (item.sprite) {
+              this.pieceLayer.removeChild(item.sprite);
+              item.sprite.destroy();
+              this.spriteMap.delete(item.key);
+            }
+          });
+          resolve();
+        }
+      };
+
+      requestAnimationFrame(animate);
+    });
+  }
+
+  public animateGravity(movements: { col: number, oldRow: number, newRow: number }[]): Promise<void> {
+    return new Promise((resolve) => {
+      if (movements.length === 0) {
+        resolve();
+        return;
+      }
+
+      const activeSprites = movements.map(move => {
+        const oldKey = this.getCellKey(move.col, move.oldRow);
+        const newKey = this.getCellKey(move.col, move.newRow);
+        const sprite = this.spriteMap.get(oldKey);
+
+        if (sprite) {
+          this.spriteMap.delete(oldKey);
+          this.spriteMap.set(newKey, sprite);
+        }
+
+        return {
+          sprite,
+          startY: sprite ? sprite.y : 0,
+          targetY: Utils.cellToWorld(move.col, move.newRow).y
+        };
+      });
+
+      const start = performance.now();
+      const duration = GAME_CONST.PLAYER.animate_time;
+
+      const animate = (now: number) => {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, GAME_CONST.PLAYER.ease); 
+
+        activeSprites.forEach(item => {
+          if (item.sprite) {
+            item.sprite.y = item.startY + (item.targetY - item.startY) * eased;
+          }
+        });
+
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          activeSprites.forEach(item => {
+            if (item.sprite) item.sprite.y = item.targetY;
+          });
+          resolve();
+        }
+      };
+      requestAnimationFrame(animate);
+    });
   }
 }

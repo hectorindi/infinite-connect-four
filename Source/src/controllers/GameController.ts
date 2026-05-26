@@ -1,3 +1,4 @@
+import { AIPlayer } from '../models/AIPlayer';
 import { GameModel } from '../models/GameModel';
 import { GAME_CONST } from '../types/const';
 import { Utils } from '../utils/Utils';
@@ -5,6 +6,8 @@ import { GameView } from '../views/GameView';
 
 export class GameController {
   private lastRenderHash: string = '';
+  private ai = new AIPlayer();
+
   constructor(private model: GameModel, private view: GameView) { }
 
   public init(): void {
@@ -205,6 +208,12 @@ export class GameController {
     this.syncHud(`<h1>${nextPlayerText.toUpperCase()} TURN.</h1> Drop a token to form chains.`);
 
     state.isAnimating = false;
+    if (state.current === 2) {
+      setTimeout(() => {
+          state.selectedCol = this.ai.getBestMove(this.model);
+          this.dropPiece();
+      }, 1000)
+    } 
   }
 
   private resetGame(): void {

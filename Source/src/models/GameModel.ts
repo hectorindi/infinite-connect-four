@@ -25,8 +25,8 @@ export class GameModel {
       player2Score: 0,
       gameOver: false,
       isAnimating: false,
-      player1Powerups: {bomb:1, col:1, row:1},
-      player2Powerups: {bomb:1, col:1, row:1}
+      player1Powerups: { bomb: 1, col: 1, row: 1 },
+      player2Powerups: { bomb: 1, col: 1, row: 1 }
     };
   }
 
@@ -198,7 +198,7 @@ export class GameModel {
       }
     } else if (type === 'row') {
       for (let cx = -10; cx <= 10; cx++) {
-        if (this.getCell(cx, y - 1) !== 0) targets.push([cx, y-1]);
+        if (this.getCell(cx, y - 1) !== 0) targets.push([cx, y - 1]);
       }
     } else if (type === 'col') {
       for (let cy = 0; cy <= this.getHeight(x); cy++) {
@@ -206,5 +206,13 @@ export class GameModel {
       }
     }
     return targets;
+  }
+
+  public clone(): GameModel {
+    const newModel = new GameModel();
+    newModel.grid = new Map(this.grid);
+    newModel.columnHeights = new Map(this.columnHeights);
+    newModel.state = JSON.parse(JSON.stringify(this.state));
+    return newModel;
   }
 }

@@ -12,7 +12,9 @@ export interface GameState {
   gameOver: boolean;
   player1Score: number,
   player2Score: number,
-  isAnimating: boolean
+  isAnimating: boolean,
+  player1Powerups: { bomb: number, row: number, col: number };
+  player2Powerups: { bomb: number, row: number, col: number };
 }
 
 export type GridMap = Map<string, number>;

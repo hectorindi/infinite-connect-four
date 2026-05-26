@@ -42,12 +42,16 @@
         </div>
       </div>
       <section class="legend">
-        <h2>Pieces</h2>
-        <div class="legend-row">
-          <div class="chip"><span class="dot red"></span>Red player</div>
-          <div class="chip"><span class="dot gold"></span>Gold player</div>
-        </div>
-      </section>
+    <h2>Power-ups</h2>
+    <div class="powerup-grid" id="powerupContainer">
+      <button class="btn-power" data-type="bomb">BOMB (1)</button>
+      <button class="btn-power" data-type="row">ROW (1)</button>
+      <button class="btn-power" data-type="col">COL (1)</button>
+    </div>
+    <p class="powerup-instructions">
+      Use Key 1 to use BOMB, 2 for ROW, and 3 for COLUMN power-ups.
+    </p>
+  </section>
     </aside>
     <section class="panel main">
       <div id="game-wrap" tabindex="0" aria-label="Infinite Connect Four game board">
@@ -58,9 +62,11 @@
             <div class="badge">Row preview <span class="turn" id="rowValue">0</span></div>
           </div>
           <div class="bottombar">
-            <div class="message" id="statusMessage"><strong>Red starts.</strong> Move the selector left or right and drop anywhere.</div>
-            <div class="footer-note">First to 3 chains wins. Chains cascade!</div>
+          <div class="message" id="statusMessage">
+            <strong>Red starts.</strong> Move the selector left or right and drop anywhere.
           </div>
+          <div class="footer-note-absolute">First to 3 chains wins. Chains cascade!</div>
+        </div>
         </div>
       </div>
     </section>

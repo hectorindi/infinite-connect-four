@@ -17,7 +17,7 @@
           <img class="brand-image" src="./assets/logo.png" alt="Infinite Connect Four logo" width="44" height="44" />
           <div class="brand-copy">
             <h1>Infinite Four</h1>
-            <p>Classic gravity-based drops, but the board stretches forever in every direction.</p>
+            <p>Match 4 tokens to clear chains. Cascading pieces form new chains. First to 3 wins!</p>
           </div>
         </div>
         <button class="theme-toggle" data-theme-toggle aria-label="Switch to light mode" title="Toggle theme"></button>
@@ -25,20 +25,33 @@
       <section class="stat-grid" aria-label="Match stats">
         <div class="stat"><div class="stat-label">Turn</div><div class="stat-value" id="turnValue">Red</div></div>
         <div class="stat"><div class="stat-label">Moves</div><div class="stat-value" id="moveValue">0</div></div>
-        <div class="stat"><div class="stat-label">View X</div><div class="stat-value" id="xValue">0</div></div>
-        <div class="stat"><div class="stat-label">View Y</div><div class="stat-value" id="yValue">0</div></div>
+        <div class="stat"><div class="stat-label">Red Chains</div><div class="stat-value" id="redScoreValue">0</div></div>
+        <div class="stat"><div class="stat-label">Gold Chains</div><div class="stat-value" id="goldScoreValue">0</div></div>
+        
+        <div class="stat" style="display: none;"><div class="stat-label">View X</div><div class="stat-value" id="xValue">0</div></div>
+        <div class="stat" style="display: none;"><div class="stat-label">View Y</div><div class="stat-value" id="yValue">0</div></div>
       </section>
       <div class="action-row">
         <button class="btn btn-primary" id="resetBtn">New match</button>
         <button class="btn btn-secondary" id="centerBtn">Center view</button>
+        <div class="speed-control" style="margin-top: 15px; display: flex; flex-direction: column; gap: 5px;">
+          <label for="speedSlider" style="font-size: 0.85rem; color: var(--text-muted);">
+            Animation Speed: <span id="speedValueDisplay">1x</span>
+          </label>
+          <input type="range" id="speedSlider" min="0.5" max="3" step="0.25" value="1">
+        </div>
       </div>
       <section class="legend">
-        <h2>Pieces</h2>
-        <div class="legend-row">
-          <div class="chip"><span class="dot red"></span>Red player</div>
-          <div class="chip"><span class="dot gold"></span>Gold player</div>
-        </div>
-      </section>
+    <h1>Power-ups</h1>
+    <div class="powerup-grid" id="powerupContainer">
+      <button class="btn-power" data-type="bomb">BOMB (1)</button>
+      <button class="btn-power" data-type="row">ROW (1)</button>
+      <button class="btn-power" data-type="col">COL (1)</button>
+    </div>
+    <p class="powerup-instructions">
+      Use Key 1 to use BOMB, 2 for ROW, and 3 for COLUMN power-ups.
+    </p>
+  </section>
     </aside>
     <section class="panel main">
       <div id="game-wrap" tabindex="0" aria-label="Infinite Connect Four game board">
@@ -49,9 +62,11 @@
             <div class="badge">Row preview <span class="turn" id="rowValue">0</span></div>
           </div>
           <div class="bottombar">
-            <div class="message" id="statusMessage"><strong>Red starts.</strong> Move the selector left or right and drop anywhere.</div>
-            <div class="footer-note">Infinite camera, finite win rule.</div>
+          <div class="message" id="statusMessage">
+            <strong>Red starts.</strong> Move the selector left or right and drop anywhere.
           </div>
+          <div class="footer-note-absolute">First to 3 chains wins. Chains cascade!</div>
+        </div>
         </div>
       </div>
     </section>

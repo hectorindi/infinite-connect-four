@@ -21,7 +21,12 @@ export class GameModel {
       dragStartY: 0,
       dragOriginX: 0,
       dragOriginY: 0,
+      player1Score: 0,
+      player2Score: 0,
       gameOver: false,
+      isAnimating: false,
+      player1Powerups: { bomb: 1, col: 1, row: 1 },
+      player2Powerups: { bomb: 1, col: 1, row: 1 }
     };
   }
 
@@ -61,10 +66,10 @@ export class GameModel {
 
   public checkWin(x: number, y: number, player: number): Point[] | null {
     const dirs: Point[] = [[1, 0], [0, 1], [1, 1], [1, -1]];
-    
+
     for (const [dx, dy] of dirs) {
       const cells: Point[] = [[x, y]];
-      
+
       let nx = x + dx;
       let ny = y + dy;
       while (this.getCell(nx, ny) === player) {
@@ -72,7 +77,7 @@ export class GameModel {
         nx += dx;
         ny += dy;
       }
-      
+
       nx = x - dx;
       ny = y - dy;
       while (this.getCell(nx, ny) === player) {
@@ -80,9 +85,134 @@ export class GameModel {
         nx -= dx;
         ny -= dy;
       }
-      
+
       if (cells.length >= 4) return cells;
     }
     return null;
+  }
+
+  public findAllChains(): Point[][] {
+    const chains: Point[][] = [];
+
+    const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+
+    const cols = Array.from(this.columnHeights.keys());
+    if (cols.length === 0) return chains;
+
+    const minCol = Math.min(...cols);
+    const maxCol = Math.max(...cols);
+
+    for (let x = minCol; x <= maxCol; x++) {
+      const height = this.getHeight(x);
+      for (let y = 0; y < height; y++) {
+        const player = this.getCell(x, y);
+        if (!player) continue;
+
+        for (const [dx, dy] of dirs) {
+
+          const prevX = x - dx;
+          const prevY = y - dy;
+          if (this.getCell(prevX, prevY) === player) continue;
+
+          const currentChain: Point[] = [[x, y]];
+          let nx = x + dx;
+          let ny = y + dy;
+
+          while (this.getCell(nx, ny) === player) {
+            currentChain.push([nx, ny]);
+            nx += dx;
+            ny += dy;
+          }
+
+          if (currentChain.length >= 4) {
+            chains.push(currentChain);
+          }
+        }
+      }
+    }
+    return chains;
+  }
+
+
+  public removeTokens(chains: Point[][]): void {
+    for (const chain of chains) {
+      for (const [x, y] of chain) {
+        this.grid.delete(this.cellKey(x, y));
+      }
+    }
+  }
+
+
+  public applyGravity(): { col: number, oldRow: number, newRow: number }[] {
+    const movements: { col: number, oldRow: number, newRow: number }[] = [];
+    const cols = Array.from(this.columnHeights.keys());
+
+    for (const col of cols) {
+      const height = this.getHeight(col);
+      let writeY = 0;
+
+      for (let readY = 0; readY < height; readY++) {
+        const player = this.getCell(col, readY);
+
+        if (player !== 0) {
+          if (writeY !== readY) {
+
+            this.setCell(col, writeY, player);
+            this.grid.delete(this.cellKey(col, readY));
+            movements.push({ col, oldRow: readY, newRow: writeY });
+          }
+          writeY++;
+        }
+      }
+      this.setHeight(col, writeY);
+    }
+    return movements;
+  }
+
+  public getUniqueSortedPoints(chains: Point[][]): Point[] {
+    const uniqueMap = new Map<string, Point>();
+    for (const chain of chains) {
+      for (const [x, y] of chain) {
+        uniqueMap.set(this.cellKey(x, y), [x, y]);
+      }
+    }
+    const points = Array.from(uniqueMap.values());
+    points.sort((a, b) => {
+      if (a[0] !== b[0]) return a[0] - b[0];
+      return a[1] - b[1];
+    });
+    return points;
+  }
+
+  public removeSingleToken(x: number, y: number): void {
+    this.grid.delete(this.cellKey(x, y));
+  }
+
+  public getPowerupTargets(type: 'bomb' | 'row' | 'col', x: number, y: number): Point[] {
+    const targets: Point[] = [];
+    if (type === 'bomb') {
+      for (let cx = x - 1; cx <= x + 1; cx++) {
+        for (let cy = y - 1; cy <= y + 1; cy++) {
+          if (this.getCell(cx, cy) !== 0) targets.push([cx, cy]);
+        }
+      }
+    } else if (type === 'row') {
+      for (let cx = -10; cx <= 10; cx++) {
+        if (this.getCell(cx, y - 1) !== 0) targets.push([cx, y - 1]);
+      }
+    } else if (type === 'col') {
+      for (let cy = 0; cy <= this.getHeight(x); cy++) {
+        if (this.getCell(x, cy) !== 0) targets.push([x, cy]);
+      }
+    }
+    return targets;
+  }
+
+  public clone(): GameModel {
+    const newModel = new GameModel();
+    newModel.grid = new Map(this.grid);
+    newModel.columnHeights = new Map(this.columnHeights);
+    newModel.state = JSON.parse(JSON.stringify(this.state));
+    return newModel;
   }
 }

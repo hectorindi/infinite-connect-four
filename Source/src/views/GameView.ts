@@ -4,9 +4,9 @@ import { GAME_CONST } from '../types/const';
 import { Utils } from '../utils/Utils';
 console.log("Pixi Version:", PIXI.VERSION);
 export class GameView {
-  
+
   public app: PIXI.Application;
-  
+
   // DOM Elements
   private root = document.documentElement;
   private gameElements = {
@@ -21,7 +21,11 @@ export class GameView {
     statusMessage: document.getElementById('statusMessage') as HTMLElement,
     resetBtn: document.getElementById('resetBtn') as HTMLElement,
     centerBtn: document.getElementById('centerBtn') as HTMLElement,
-    themeBtn: document.querySelector('[data-theme-toggle]') as HTMLElement
+    themeBtn: document.querySelector('[data-theme-toggle]') as HTMLElement,
+    redScoreValue: document.getElementById('redScoreValue') as HTMLElement,
+    goldScoreValue: document.getElementById('goldScoreValue') as HTMLElement,
+    speedSlider: document.getElementById('speedSlider') as HTMLInputElement,
+    speedValueDisplay: document.getElementById('speedValueDisplay') as HTMLElement,
   };
 
   // Pixi layers
@@ -29,7 +33,11 @@ export class GameView {
   private gridLayer!: PIXI.Graphics;
   private pieceLayer!: PIXI.Container;
   private fxLayer!: PIXI.Container;
+  private previewLayer!: PIXI.Container;
   private preview!: PIXI.Graphics;
+
+  private spriteMap: Map<string, PIXI.Graphics> = new Map();
+  private previewBaseY: number = 0;
 
   constructor() {
     this.app = new PIXI.Application();
@@ -54,12 +62,10 @@ export class GameView {
     this.gridLayer = new PIXI.Graphics({});
     this.pieceLayer = new PIXI.Container();
     this.fxLayer = new PIXI.Container();
-    
-    const previewLayer = new PIXI.Container();
+    this.previewLayer = new PIXI.Container();
     this.preview = new PIXI.Graphics({});
-    previewLayer.addChild(this.preview);
-
-    this.world.addChild(this.gridLayer, this.pieceLayer, this.fxLayer, previewLayer);
+    this.previewLayer.addChild(this.preview);
+    this.world.addChild(this.gridLayer, this.pieceLayer, this.fxLayer, this.previewLayer);
     this.app.stage.addChild(this.world);
   }
 
@@ -67,7 +73,6 @@ export class GameView {
   private setupTheme(): void {
     let theme = matchMedia('(prefers-color-scheme: dark)').matches ? GAME_CONST.CSS.DARK : GAME_CONST.CSS.LIGHT;
     this.root.setAttribute('data-theme', theme);
-    
     const setThemeIcon = () => {
       this.gameElements.themeBtn.setAttribute('aria-label', `Switch to ${theme === GAME_CONST.CSS.DARK ? GAME_CONST.CSS.LIGHT : GAME_CONST.CSS.DARK} mode`);
       this.gameElements.themeBtn.innerHTML = theme === 'dark'
@@ -90,6 +95,8 @@ export class GameView {
     this.gameElements.yValue.textContent = String(nextRow);
     this.gameElements.columnValue.textContent = String(state.selectedCol);
     this.gameElements.rowValue.textContent = String(nextRow);
+    this.gameElements.redScoreValue.textContent = String(state.player1Score);
+    this.gameElements.goldScoreValue.textContent = String(state.player2Score);
     if (message) this.gameElements.statusMessage.innerHTML = message;
   }
 
@@ -98,9 +105,9 @@ export class GameView {
     this.world.x = this.app.screen.width / 2 + state.cameraX;
     this.world.y = this.app.screen.height / 2 + state.cameraY;
     this.gridLayer.clear();
-    
+
     const line = PIXI.Color.shared.setValue(Utils.token('--color-border', this.root)).toNumber();
-    const accent = PIXI.Color.shared.setValue(Utils.token('--color-primary',this.root)).toNumber();
+    const accent = PIXI.Color.shared.setValue(Utils.token('--color-primary', this.root)).toNumber();
 
     const visibleCols = Math.ceil(this.app.screen.width / GAME_CONST.CELL_DIMENTION);
     const visibleRows = Math.ceil(this.app.screen.height / GAME_CONST.CELL_DIMENTION);
@@ -136,11 +143,24 @@ export class GameView {
 
   public renderPreview(state: GameState, nextRow: number, time: number = 0): void {
     const pos = Utils.cellToWorld(state.selectedCol, nextRow);
+    this.previewLayer.position.set(pos.x, pos.y + Math.sin(time / GAME_CONST.PLAYER.animate_time) * GAME_CONST.PLAYER.spawn_height_mul);
     this.preview.clear();
-    this.preview
-      .circle(pos.x, pos.y + Math.sin(time / GAME_CONST.PLAYER.animate_time) * GAME_CONST.PLAYER.spawn_height_mul, GAME_CONST.CELL_DIMENTION * GAME_CONST.PLAYER.radius - 0.02)
+      this.preview
+      .circle(0, 0 , GAME_CONST.CELL_DIMENTION * GAME_CONST.PLAYER.radius - 0.02)
       .fill(Utils.pieceColor(state.current), 0.22)
       .stroke({ color: Utils.pieceColor(state.current), width: 3, alpha: 0.9 });
+  }
+
+  public animatePreview(time: number, isAnimating: boolean): void {
+    if (!this.preview) return;
+
+    if (isAnimating) {
+      this.preview.alpha = 0;
+      return;
+    }
+    this.preview.alpha = 0.5; 
+    const bounceOffset = Math.sin(time / 200) * 8; 
+    this.preview.y = this.previewBaseY + bounceOffset;
   }
 
   // Animation Elements
@@ -154,24 +174,33 @@ export class GameView {
     return g;
   }
 
-  public addPiece(col: number, row: number, player: number): void {
-    const pos = Utils.cellToWorld(col, row);
-    const piece = this.makePieceSprite(player);
-    piece.x = pos.x;
-    piece.y = pos.y - GAME_CONST.CELL_DIMENTION * GAME_CONST.PLAYER.spawn_height_mul;
-    this.pieceLayer.addChild(piece);
+  public animateDrop(col: number, row: number, player: number): Promise<void> {
+    return new Promise((resolve) => {
+      const pos = Utils.cellToWorld(col, row);
+      const piece = this.makePieceSprite(player);
+      piece.x = pos.x;
+      piece.y = pos.y - GAME_CONST.CELL_DIMENTION * GAME_CONST.PLAYER.spawn_height_mul;
 
-    const targetY = pos.y;
-    const startY = piece.y;
-    const start = performance.now();
+      this.pieceLayer.addChild(piece);
+      this.spriteMap.set(this.getCellKey(col, row), piece);
 
-    const animate = (now: number) => {
-      const t = Math.min((now - start) / GAME_CONST.PLAYER.animate_time, 1);
-      const eased = 1 - Math.pow(1 - t, GAME_CONST.PLAYER.ease);
-      piece.y = startY + (targetY - startY) * eased;
-      if (t < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
+      const targetY = pos.y;
+      const startY = piece.y;
+      const start = performance.now();
+
+      const animate = (now: number) => {
+        const t = Math.min((now - start) / GAME_CONST.PLAYER.animate_time, 1);
+        const eased = 1 - Math.pow(1 - t, GAME_CONST.PLAYER.ease);
+        piece.y = startY + (targetY - startY) * eased;
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          piece.y = targetY;
+          resolve();
+        }
+      };
+      requestAnimationFrame(animate);
+    });
   }
 
   public pulseWin(cells: Point[]): void {
@@ -191,6 +220,7 @@ export class GameView {
   public clearLayerEffects(): void {
     this.pieceLayer.removeChildren();
     this.fxLayer.removeChildren();
+    this.spriteMap.clear();
   }
 
   public focusWrapper(): void {
@@ -199,5 +229,91 @@ export class GameView {
 
   public getElements() {
     return this.gameElements;
+  }
+
+  private getCellKey(col: number, row: number): string {
+    return `${col},${row}`;
+  }
+
+  public animateSingleDisappear(col: number, row: number): Promise<void> {
+    return new Promise((resolve) => {
+      const key = this.getCellKey(col, row);
+      const sprite = this.spriteMap.get(key);
+
+      if (!sprite) {
+        resolve();
+        return;
+      }
+
+      const start = performance.now();
+      const duration = GAME_CONST.PLAYER.disappear_time;
+
+      const animate = (now: number) => {
+        const t = Math.min((now - start) / duration, 1);
+        
+        sprite.alpha = 1 - t;
+        sprite.scale.set(1 - (t * 0.5));
+
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          this.pieceLayer.removeChild(sprite);
+          sprite.destroy();
+          this.spriteMap.delete(key);
+          resolve();
+        }
+      };
+      requestAnimationFrame(animate);
+    });
+  }
+
+  public animateGravity(movements: { col: number, oldRow: number, newRow: number }[]): Promise<void> {
+    return new Promise((resolve) => {
+      if (movements.length === 0) {
+        resolve();
+        return;
+      }
+
+      const activeSprites = movements.map(move => {
+        const oldKey = this.getCellKey(move.col, move.oldRow);
+        const newKey = this.getCellKey(move.col, move.newRow);
+        const sprite = this.spriteMap.get(oldKey);
+
+        if (sprite) {
+          this.spriteMap.delete(oldKey);
+          this.spriteMap.set(newKey, sprite);
+        }
+
+        return {
+          sprite,
+          startY: sprite ? sprite.y : 0,
+          targetY: Utils.cellToWorld(move.col, move.newRow).y
+        };
+      });
+
+      const start = performance.now();
+      const duration = GAME_CONST.PLAYER.animate_time;
+
+      const animate = (now: number) => {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, GAME_CONST.PLAYER.ease); 
+
+        activeSprites.forEach(item => {
+          if (item.sprite) {
+            item.sprite.y = item.startY + (item.targetY - item.startY) * eased;
+          }
+        });
+
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          activeSprites.forEach(item => {
+            if (item.sprite) item.sprite.y = item.targetY;
+          });
+          resolve();
+        }
+      };
+      requestAnimationFrame(animate);
+    });
   }
 }
